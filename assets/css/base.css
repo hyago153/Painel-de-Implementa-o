@@ -1,0 +1,22 @@
+/* ─── RESET ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: 'Poppins', sans-serif; background: #f0f0f2; }
+
+/* ─── BRAND TOKENS ──────────────────────────────────── */
+:root {
+  --g:   #0bbf7e;
+  --g2:  #09a86d;
+  --n:   #0c021c;
+  --n2:  #1a0a2e;
+  --b:   #59abed;
+  --y:   #ffb317;
+  --gd:  rgba(11,191,126,0.10);
+  --gd2: rgba(11,191,126,0.20);
+  --gd3: rgba(11,191,126,0.06);
+  --sb-w: 220px;
+  --top-h: 52px;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+

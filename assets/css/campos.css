@@ -1,0 +1,109 @@
+/* ─── MÓDULO: CONSULTA DE CAMPOS ─────────────────────── */
+.campos-tabs { display: flex; gap: 0; margin-bottom: 12px; }
+.campos-tab { font-family: 'Poppins', sans-serif; font-size: 12px; font-weight: 500; padding: 7px 18px; border: 1.5px solid #e0e0e6; background: #fff; color: #888; cursor: pointer; transition: all .15s; }
+.campos-tab:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.campos-tab:not(:first-child) { border-left: none; }
+.campos-tab:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.campos-tab.active { background: var(--n); color: #fff; border-color: var(--n); font-weight: 600; }
+.campos-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.campos-table th { font-size: 9px; font-weight: 600; color: #aaa; text-align: left; padding: 6px 7px; border-bottom: 1.5px solid #eee; text-transform: uppercase; cursor: pointer; white-space: nowrap; user-select: none; transition: color .16s, background .16s, box-shadow .16s; }
+.campos-table th:hover { color: #fff; background: rgba(11,191,126,.055); box-shadow: inset 0 0 0 1px rgba(11,191,126,.22), 0 0 16px rgba(11,191,126,.14); }
+.campos-table th.sort-asc::after  { content: ' ↑'; color: var(--g); }
+.campos-table th.sort-desc::after { content: ' ↓'; color: var(--g); }
+.campos-table td { padding: 6px 7px; border-bottom: 1px solid #f5f5f7; vertical-align: middle; }
+.campos-table tr:last-child td { border-bottom: none; }
+.campos-table tr:hover td { background: #fafbff; }
+.vis-badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+.vis-badge.vis    { background: #dcfce7; color: #166534; }
+.vis-badge.fixed  { background: #d1fae5; color: #065f46; }
+.campos-action-btn { font-size: 9px; font-weight: 600; padding: 3px 6px; border-radius: 6px; border: 1.5px solid #e0e0e6; background: #fff; cursor: pointer; transition: all .15s; white-space: nowrap; }
+.campos-action-btn.edit  { color: #1a5ce5; border-color: rgba(26,92,229,.25); }
+.campos-action-btn.edit:hover  { background: #eff4ff; }
+.campos-action-btn.del   { color: #dc2626; border-color: rgba(220,38,38,.25); }
+.campos-action-btn.del:hover   { background: #fff1f2; }
+/* ─── MODAL EDITAR CAMPO ─────────────────────────────── */
+#campos-edit-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; display:none; align-items:center; justify-content:center; }
+#campos-edit-overlay.open { display:flex; }
+.campos-edit-box { background:#fff; border-radius:16px; padding:28px 28px 22px; width:100%; max-width:480px; box-shadow:0 12px 48px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:14px; }
+.campos-edit-box h3 { font-size:15px; font-weight:700; color:#1a1a2e; margin:0; }
+.campos-edit-box .edit-field-id { font-family:monospace; font-size:11px; color:#888; background:#f5f5f7; padding:4px 8px; border-radius:6px; }
+.campos-edit-box label { font-size:11px; font-weight:600; color:#555; display:block; margin-bottom:4px; }
+.campos-edit-check-row { display:flex; gap:20px; flex-wrap:wrap; }
+.campos-edit-check-row label { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500; color:#444; cursor:pointer; }
+.campos-edit-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:4px; }
+.vis-badge.oculto { background: #f3f4f6; color: #6b7280; }
+.origin-badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+.origin-badge.native { background: #dbeafe; color: #1e40af; }
+.origin-badge.custom { background: #ede9fe; color: #5b21b6; }
+.campos-search-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.campos-search { flex: 1; min-width: 180px; font-family: 'Poppins', sans-serif; font-size: 12px; padding: 7px 10px; border: 1.5px solid #e0e0e6; border-radius: var(--radius-sm); background: #fff; color: var(--n); outline: none; transition: border-color .15s; }
+.campos-search:focus { border-color: var(--g); }
+.campos-count { font-size: 11px; color: #aaa; white-space: nowrap; flex-shrink: 0; }
+.campos-mobile-bulk-toggle,
+.campos-mobile-field-head { display: none !important; }
+.campos-field-label-desktop { display: inline; }
+.campos-opt-tag { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 8px; background: #fff3cd; color: #856404; border: 1px solid #ffc107; margin: 1px 2px 1px 0; white-space: nowrap; }
+.campos-opts-cell { display: flex; flex-wrap: wrap; gap: 2px; max-width: 220px; }
+
+/* Ajuste responsivo e manual da grade de campos */
+.campos-table-wrap { overflow-x: auto; max-width: 100%; }
+.campos-table { min-width: 760px; table-layout: fixed; }
+.campos-table th {
+  position: relative;
+  padding-right: 15px;
+}
+.campos-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.campos-table td:first-child {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.campos-table td:nth-child(2) {
+  font-size: 9px !important;
+  line-height: 1.35;
+}
+.campos-table td:nth-child(3),
+.campos-table td:nth-child(4),
+.campos-table td:nth-child(5),
+.campos-table td:nth-child(6) {
+  white-space: nowrap;
+}
+.campos-table td:nth-child(6) {
+  font-size: 10px !important;
+}
+.campos-table td:nth-child(8) > div {
+  gap: 3px !important;
+  flex-wrap: wrap;
+}
+.campos-table .col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 9px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 2;
+}
+.campos-table .col-resizer::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  right: 4px;
+  width: 1px;
+  height: 60%;
+  background: rgba(255,255,255,.14);
+  opacity: 0;
+  transition: opacity .15s, background .15s;
+}
+.campos-table th:hover .col-resizer::after,
+.campos-table th.resizing .col-resizer::after {
+  opacity: 1;
+  background: var(--g);
+}
+.campos-table th.sort-asc .col-resizer,
+.campos-table th.sort-desc .col-resizer { right: 0; }
+.campos-opts-cell { max-width: 100%; }
+

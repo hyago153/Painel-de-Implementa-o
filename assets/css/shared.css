@@ -1,0 +1,22 @@
+/* ─── PLACEHOLDER PANELS ─────────────────────────────── */
+.placeholder-panel {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; height: 300px; gap: 10px; opacity: .4;
+}
+.placeholder-panel .ph-icon { font-size: 36px; }
+.placeholder-panel .ph-txt { font-size: 13px; font-weight: 600; color: var(--n); }
+.placeholder-panel .ph-sub { font-size: 11px; color: #888; }
+
+/* ─── ENTITY TABS ────────────────────────────────────── */
+.entity-tabs { display: flex; gap: 0; flex-wrap: nowrap; }
+.etab {
+  font-family: 'Poppins', sans-serif; font-size: 12px; font-weight: 500;
+  padding: 7px 16px; border: 1.5px solid #e0e0e6;
+  background: #fff; color: #888; cursor: pointer; transition: all .15s;
+  flex-shrink: 0;
+}
+.etab:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.etab:not(:first-child) { border-left: none; }
+.etab:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.etab.active { background: var(--g); color: var(--n); border-color: var(--g); font-weight: 600; }
+

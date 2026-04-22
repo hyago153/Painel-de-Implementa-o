@@ -1,0 +1,8 @@
+.agents/
+plugins/
+ROTEIRO_PUBLICACAO_GITHUB.md
+
+# Local/editor files
+.DS_Store
+Thumbs.db
+*.log
