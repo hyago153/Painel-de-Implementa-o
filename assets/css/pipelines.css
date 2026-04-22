@@ -117,7 +117,7 @@
   touch-action: none;
   margin-bottom: 12px;
 }
-.scp-canvas-wrap canvas { display: block; width: 100%; border-radius: 8px; }
+.scp-canvas-wrap canvas { display: block; width: 100%; aspect-ratio: 280 / 160; border-radius: 8px; }
 .scp-thumb {
   position: absolute;
   width: 14px;

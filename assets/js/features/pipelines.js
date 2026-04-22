@@ -482,13 +482,12 @@ function _scpPaintSv() {
 
 function _scpPaintHue() {
   const canvas = document.getElementById('scp-hue');
-  if (!canvas || canvas.dataset.painted === '1') return;
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const g = ctx.createLinearGradient(0, 0, canvas.width, 0);
   for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, `hsl(${i * 60},100%,50%)`);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  canvas.dataset.painted = '1';
 }
 
 function _scpRelPos(canvas, e) {
