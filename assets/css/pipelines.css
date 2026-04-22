@@ -92,7 +92,7 @@
   display: flex;
 }
 .stage-color-modal {
-  width: min(360px, 100%);
+  width: min(380px, 100%);
   padding: 22px 24px 18px;
   border: 1px solid rgba(255,255,255,.09);
   border-radius: 22px;
@@ -101,60 +101,124 @@
   color: #e8edf2;
 }
 .stage-color-modal h3 {
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   color: #e8edf2;
   font-size: 20px;
   font-weight: 500;
   letter-spacing: 0;
 }
-.stage-color-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 44px);
-  gap: 12px 34px;
-  justify-content: start;
-  margin: 4px 0 14px;
+
+/* ── SCP: canvas HSV ─────────────────────────────────────────── */
+.scp-sv-wrap {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  cursor: crosshair;
+  user-select: none;
+  touch-action: none;
 }
-.stage-color-swatch {
-  width: 44px;
-  height: 44px;
-  border: 2px solid #4b555a;
-  border-radius: 2px;
-  box-shadow: inset 0 0 0 3px #0d1113;
-  cursor: pointer;
+.scp-sv-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
-.stage-color-swatch.active {
-  outline: 2px solid #9bd9f4;
-  outline-offset: 3px;
+.scp-sv-cursor {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px rgba(0,0,0,.6), 0 1px 4px rgba(0,0,0,.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  top: 0;
+  left: 0;
 }
-.stage-color-meta {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 18px;
-  align-items: end;
-}
-.stage-color-custom,
-.stage-color-selected {
+.scp-controls {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  color: #b9c9d6;
-  font-size: 14px;
-  font-weight: 500;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
 }
-.stage-color-custom input {
-  width: 144px;
+.scp-hue-wrap {
+  position: relative;
+  flex: 1;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+}
+.scp-hue-canvas {
+  display: block;
+  width: 100%;
+  height: 14px;
+  border-radius: 7px;
+}
+.scp-hue-cursor {
+  position: absolute;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px rgba(0,0,0,.55);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  left: 0;
+}
+.scp-preview {
+  width: 36px;
+  height: 36px;
+  border-radius: 7px;
+  border: 2px solid rgba(255,255,255,.2);
+  flex-shrink: 0;
+}
+.scp-eye-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 8px;
+  background: rgba(255,255,255,.07);
+  color: #9bd9f4;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.scp-eye-btn:hover { background: rgba(255,255,255,.15); }
+.scp-eye-btn svg { width: 18px; height: 18px; pointer-events: none; }
+.scp-hex-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.scp-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #7a9aad;
+  min-width: 30px;
+  letter-spacing: .07em;
+}
+.scp-hex-input {
   height: 34px;
+  width: 130px;
   background: rgba(255,255,255,.08);
   border-color: rgba(255,255,255,.18);
   color: #fff;
+  font-family: monospace;
+  letter-spacing: .05em;
+  text-transform: uppercase;
 }
-.stage-color-selected-swatch {
-  width: 44px;
-  height: 44px;
-  border: 2px solid #4b555a;
-  border-radius: 2px;
-  box-shadow: inset 0 0 0 3px #0d1113;
-}
+
 .stage-color-actions {
   display: flex;
   justify-content: flex-end;

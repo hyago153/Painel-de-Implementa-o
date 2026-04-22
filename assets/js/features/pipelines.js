@@ -6,7 +6,6 @@ let pipSelectedId   = null;
 let pipSelectedName = '';
 let pipLastContextKey = '';
 const stageCollapsedIds = new Set();
-const stageColorPresets = ['#FF0000', '#00F5F0', '#0000FF', '#00FF00', '#FF00FF', '#FFFF00', '#000000', '#FFFFFF'];
 let stageColorPickerState = null;
 
 function pipMode() {
@@ -428,48 +427,192 @@ function stageSyncColorButton(buttonId, value) {
   if (btn && hex) btn.style.setProperty('--stage-color', hex);
 }
 
-function stageRenderColorGrid() {
-  const grid = document.getElementById('stage-color-grid');
-  if (!grid || grid.dataset.ready === '1') return;
-  grid.innerHTML = stageColorPresets.map(color => `
-    <button type="button" class="stage-color-swatch" style="--stage-color:${color};"
-      data-color="${color}" aria-label="Selecionar ${color}" onclick="stageSetPendingColor('${color}')"></button>
-  `).join('');
-  grid.dataset.ready = '1';
+/* ── Conversão HSV ↔ RGB ↔ HEX ──────────────────────────────── */
+function scpHsvToRgb(h, s, v) {
+  const c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c;
+  let r0, g0, b0;
+  if      (h <  60) { r0 = c; g0 = x; b0 = 0; }
+  else if (h < 120) { r0 = x; g0 = c; b0 = 0; }
+  else if (h < 180) { r0 = 0; g0 = c; b0 = x; }
+  else if (h < 240) { r0 = 0; g0 = x; b0 = c; }
+  else if (h < 300) { r0 = x; g0 = 0; b0 = c; }
+  else              { r0 = c; g0 = 0; b0 = x; }
+  return { r: Math.round((r0+m)*255), g: Math.round((g0+m)*255), b: Math.round((b0+m)*255) };
 }
 
-function stagePaintColorPicker(hex) {
-  const selected = stageNormalizeHex(hex) || '#9BC2E6';
-  const custom = document.getElementById('stage-color-custom-input');
-  const preview = document.getElementById('stage-color-selected-swatch');
-  const grid = document.getElementById('stage-color-grid');
-  if (custom) custom.value = selected;
-  if (preview) preview.style.setProperty('--stage-color', selected);
-  if (grid) {
-    grid.querySelectorAll('.stage-color-swatch').forEach(btn => {
-      btn.classList.toggle('active', stageNormalizeHex(btn.dataset.color) === selected);
-    });
+function scpRgbToHsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  const s = max === 0 ? 0 : d / max;
+  const v = max;
+  let h;
+  if (d === 0)       { h = 0; }
+  else if (max === r) { h = ((g - b) / d % 6 + 6) % 6 * 60; }
+  else if (max === g) { h = ((b - r) / d + 2) * 60; }
+  else                { h = ((r - g) / d + 4) * 60; }
+  return { h, s, v };
+}
+
+function scpHexToRgb(hex) {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return null;
+  return { r: parseInt(m[1].slice(0,2),16), g: parseInt(m[1].slice(2,4),16), b: parseInt(m[1].slice(4,6),16) };
+}
+
+function scpRgbToHex(r, g, b) {
+  return '#' + [r,g,b].map(n => Math.max(0,Math.min(255,Math.round(n))).toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+
+/* ── Renderização dos canvas ─────────────────────────────────── */
+function scpPaintSvCanvas(h) {
+  const canvas = document.getElementById('scp-sv-canvas');
+  if (!canvas || !canvas.width) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, ht = canvas.height;
+  const { r, g, b } = scpHsvToRgb(h, 1, 1);
+  ctx.fillStyle = `rgb(${r},${g},${b})`;
+  ctx.fillRect(0, 0, w, ht);
+  const wg = ctx.createLinearGradient(0, 0, w, 0);
+  wg.addColorStop(0, 'rgba(255,255,255,1)');
+  wg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = wg; ctx.fillRect(0, 0, w, ht);
+  const bg = ctx.createLinearGradient(0, 0, 0, ht);
+  bg.addColorStop(0, 'rgba(0,0,0,0)');
+  bg.addColorStop(1, 'rgba(0,0,0,1)');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, ht);
+}
+
+function scpPaintHueCanvas() {
+  const canvas = document.getElementById('scp-hue-canvas');
+  if (!canvas || !canvas.width) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, ht = canvas.height;
+  const grad = ctx.createLinearGradient(0, 0, w, 0);
+  for (let i = 0; i <= 6; i++) {
+    const rgb = scpHsvToRgb(i * 60, 1, 1);
+    grad.addColorStop(i / 6, `rgb(${rgb.r},${rgb.g},${rgb.b})`);
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, ht);
+}
+
+function scpResizeCanvases() {
+  ['scp-sv-canvas', 'scp-hue-canvas'].forEach(id => {
+    const c = document.getElementById(id);
+    if (!c) return;
+    const rect = c.getBoundingClientRect();
+    if (rect.width > 0) { c.width = Math.round(rect.width); c.height = Math.round(rect.height); }
+  });
+}
+
+/* ── Cursores ────────────────────────────────────────────────── */
+function scpMoveSvCursor(s, v) {
+  const canvas = document.getElementById('scp-sv-canvas');
+  const cursor = document.getElementById('scp-sv-cursor');
+  if (!canvas || !cursor) return;
+  cursor.style.left = (s * canvas.offsetWidth)  + 'px';
+  cursor.style.top  = ((1 - v) * canvas.offsetHeight) + 'px';
+}
+
+function scpMoveHueCursor(h) {
+  const canvas = document.getElementById('scp-hue-canvas');
+  const cursor = document.getElementById('scp-hue-cursor');
+  if (!canvas || !cursor) return;
+  cursor.style.left = ((h / 360) * canvas.offsetWidth) + 'px';
+}
+
+/* ── Atualização central ─────────────────────────────────────── */
+function scpUpdate(hsv) {
+  if (!stageColorPickerState) return;
+  stageColorPickerState.hsv = hsv;
+  const { h, s, v } = hsv;
+  const rgb = scpHsvToRgb(h, s, v);
+  const hex = scpRgbToHex(rgb.r, rgb.g, rgb.b);
+  stageColorPickerState.value = hex;
+  scpPaintSvCanvas(h);
+  scpMoveSvCursor(s, v);
+  scpMoveHueCursor(h);
+  const preview = document.getElementById('scp-preview');
+  if (preview) preview.style.background = hex;
+  const hexInput = document.getElementById('stage-color-custom-input');
+  if (hexInput && document.activeElement !== hexInput) hexInput.value = hex;
+}
+
+/* ── Handlers de ponteiro ────────────────────────────────────── */
+function scpSvFromEvent(e) {
+  const canvas = document.getElementById('scp-sv-canvas');
+  if (!canvas || !stageColorPickerState) return;
+  const rect = canvas.getBoundingClientRect();
+  const s = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const v = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
+  scpUpdate({ h: stageColorPickerState.hsv.h, s, v });
+}
+
+function scpHueFromEvent(e) {
+  const canvas = document.getElementById('scp-hue-canvas');
+  if (!canvas || !stageColorPickerState) return;
+  const rect = canvas.getBoundingClientRect();
+  const h = Math.max(0, Math.min(359.99, ((e.clientX - rect.left) / rect.width) * 360));
+  scpUpdate({ h, s: stageColorPickerState.hsv.s, v: stageColorPickerState.hsv.v });
+}
+
+function scpOnHexInput(value) {
+  if (!stageColorPickerState) return;
+  const hex = stageNormalizeHex(value);
+  if (!hex) return;
+  const rgb = scpHexToRgb(hex);
+  if (rgb) scpUpdate(scpRgbToHsv(rgb.r, rgb.g, rgb.b));
+}
+
+async function scpPickFromScreen() {
+  if (!window.EyeDropper) { toast('EyeDropper não é suportado neste navegador.', 'wn'); return; }
+  try {
+    const result = await new EyeDropper().open();
+    const hex = stageNormalizeHex(result.sRGBHex);
+    if (hex) { const rgb = scpHexToRgb(hex); if (rgb) scpUpdate(scpRgbToHsv(rgb.r, rgb.g, rgb.b)); }
+  } catch (_) { /* usuário cancelou */ }
+}
+
+function scpInitEvents() {
+  if (scpInitEvents._done) return;
+  scpInitEvents._done = true;
+  const svWrap  = document.getElementById('scp-sv-wrap');
+  const hueWrap = document.getElementById('scp-hue-wrap');
+  if (svWrap) {
+    svWrap.addEventListener('pointerdown', e => { svWrap.setPointerCapture(e.pointerId); scpSvFromEvent(e); });
+    svWrap.addEventListener('pointermove', e => { if (e.buttons) scpSvFromEvent(e); });
+  }
+  if (hueWrap) {
+    hueWrap.addEventListener('pointerdown', e => { hueWrap.setPointerCapture(e.pointerId); scpHueFromEvent(e); });
+    hueWrap.addEventListener('pointermove', e => { if (e.buttons) scpHueFromEvent(e); });
   }
 }
 
-function stageOpenColorPicker(inputId, buttonId) {
-  const input = document.getElementById(inputId);
-  const overlay = document.getElementById('stage-color-overlay');
-  if (!input || !overlay) return;
-  stageRenderColorGrid();
-  const current = stageNormalizeHex(input.value) || '#9BC2E6';
-  stageColorPickerState = { inputId, buttonId, value: current };
-  stagePaintColorPicker(current);
-  overlay.classList.add('open');
-  document.body.classList.add('stage-color-open');
-}
-
+/* ── API pública ─────────────────────────────────────────────── */
 function stageSetPendingColor(value) {
   if (!stageColorPickerState) return;
   const hex = stageNormalizeHex(value);
   if (!hex) return;
-  stageColorPickerState.value = hex;
-  stagePaintColorPicker(hex);
+  const rgb = scpHexToRgb(hex);
+  if (rgb) scpUpdate(scpRgbToHsv(rgb.r, rgb.g, rgb.b));
+}
+
+function stageOpenColorPicker(inputId, buttonId) {
+  const input   = document.getElementById(inputId);
+  const overlay = document.getElementById('stage-color-overlay');
+  if (!input || !overlay) return;
+  scpInitEvents();
+  const hex = stageNormalizeHex(input.value) || '#9BC2E6';
+  const rgb = scpHexToRgb(hex) || { r: 155, g: 194, b: 230 };
+  const hsv = scpRgbToHsv(rgb.r, rgb.g, rgb.b);
+  stageColorPickerState = { inputId, buttonId, value: hex, hsv };
+  overlay.classList.add('open');
+  document.body.classList.add('stage-color-open');
+  requestAnimationFrame(() => {
+    scpResizeCanvases();
+    scpPaintHueCanvas();
+    scpUpdate(hsv);
+  });
 }
 
 function stageApplyColorPicker() {
