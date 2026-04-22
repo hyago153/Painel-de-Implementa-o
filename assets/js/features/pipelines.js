@@ -6,8 +6,9 @@ let pipSelectedId   = null;
 let pipSelectedName = '';
 let pipLastContextKey = '';
 const stageCollapsedIds = new Set();
-const stageColorPresets = ['#FF0000', '#00F5F0', '#0000FF', '#00FF00', '#FF00FF', '#FFFF00', '#000000', '#FFFFFF'];
 let stageColorPickerState = null;
+let _scpH = 0, _scpS = 1, _scpV = 1;
+let _scpSvDrag = false, _scpHueDrag = false;
 
 function pipMode() {
   return window.EntityContext ? window.EntityContext.getCurrentMode() : 'crm';
@@ -428,48 +429,174 @@ function stageSyncColorButton(buttonId, value) {
   if (btn && hex) btn.style.setProperty('--stage-color', hex);
 }
 
-function stageRenderColorGrid() {
-  const grid = document.getElementById('stage-color-grid');
-  if (!grid || grid.dataset.ready === '1') return;
-  grid.innerHTML = stageColorPresets.map(color => `
-    <button type="button" class="stage-color-swatch" style="--stage-color:${color};"
-      data-color="${color}" aria-label="Selecionar ${color}" onclick="stageSetPendingColor('${color}')"></button>
-  `).join('');
-  grid.dataset.ready = '1';
+/* ---- HSV Color Picker -------------------------------------------------- */
+
+function _scpHsvToRgb(h, s, v) {
+  const i = Math.floor(h / 60) % 6;
+  const f = h / 60 - Math.floor(h / 60);
+  const p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+  return [[v,t,p,p,q,v],[q,v,v,t,p,p],[p,p,q,v,v,t]].map(a => Math.round(a[i] * 255));
 }
 
-function stagePaintColorPicker(hex) {
-  const selected = stageNormalizeHex(hex) || '#9BC2E6';
-  const custom = document.getElementById('stage-color-custom-input');
-  const preview = document.getElementById('stage-color-selected-swatch');
-  const grid = document.getElementById('stage-color-grid');
-  if (custom) custom.value = selected;
-  if (preview) preview.style.setProperty('--stage-color', selected);
-  if (grid) {
-    grid.querySelectorAll('.stage-color-swatch').forEach(btn => {
-      btn.classList.toggle('active', stageNormalizeHex(btn.dataset.color) === selected);
-    });
+function _scpRgbToHsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max - min;
+  let h = 0;
+  const s = max === 0 ? 0 : d / max, v = max;
+  if (d > 0) {
+    if (max === r)      h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+    else if (max === g) h = ((b - r) / d + 2) * 60;
+    else                h = ((r - g) / d + 4) * 60;
   }
+  return [h, s, v];
+}
+
+function _scpToHex(r, g, b) {
+  return '#' + [r,g,b].map(n => n.toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+
+function _scpHexToRgb(hex) {
+  const h = hex.replace('#','');
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return null;
+  const n = parseInt(h, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function _scpPaintSv() {
+  const canvas = document.getElementById('scp-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const [hr, hg, hb] = _scpHsvToRgb(_scpH, 1, 1);
+  const gradS = ctx.createLinearGradient(0, 0, w, 0);
+  gradS.addColorStop(0, '#fff');
+  gradS.addColorStop(1, `rgb(${hr},${hg},${hb})`);
+  ctx.fillStyle = gradS;
+  ctx.fillRect(0, 0, w, h);
+  const gradV = ctx.createLinearGradient(0, 0, 0, h);
+  gradV.addColorStop(0, 'rgba(0,0,0,0)');
+  gradV.addColorStop(1, '#000');
+  ctx.fillStyle = gradV;
+  ctx.fillRect(0, 0, w, h);
+}
+
+function _scpPaintHue() {
+  const canvas = document.getElementById('scp-hue');
+  if (!canvas || canvas.dataset.painted === '1') return;
+  const ctx = canvas.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, `hsl(${i * 60},100%,50%)`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  canvas.dataset.painted = '1';
+}
+
+function _scpRelPos(canvas, e) {
+  const rect = canvas.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return {
+    x: Math.max(0, Math.min(canvas.width,  (t.clientX - rect.left) / rect.width  * canvas.width)),
+    y: Math.max(0, Math.min(canvas.height, (t.clientY - rect.top)  / rect.height * canvas.height)),
+  };
+}
+
+function _scpSync() {
+  const hex = _scpToHex(..._scpHsvToRgb(_scpH, _scpS, _scpV));
+  const svCanvas  = document.getElementById('scp-canvas');
+  const hCanvas   = document.getElementById('scp-hue');
+  const thumb     = document.getElementById('scp-thumb');
+  const hThumb    = document.getElementById('scp-hue-thumb');
+  const preview   = document.getElementById('scp-preview');
+  const hexInp    = document.getElementById('scp-hex-input');
+  if (svCanvas && thumb) {
+    const r = svCanvas.getBoundingClientRect();
+    thumb.style.left = `${_scpS * r.width}px`;
+    thumb.style.top  = `${(1 - _scpV) * r.height}px`;
+  }
+  if (hCanvas && hThumb) {
+    hThumb.style.left = `${(_scpH / 360) * hCanvas.getBoundingClientRect().width}px`;
+  }
+  if (preview) preview.style.background = hex;
+  if (hexInp && document.activeElement !== hexInp) hexInp.value = hex.slice(1);
+  if (stageColorPickerState) stageColorPickerState.value = hex;
+}
+
+function _scpBindEvents() {
+  const sv  = document.getElementById('scp-canvas');
+  const hue = document.getElementById('scp-hue');
+  if (!sv || sv.dataset.bound === '1') return;
+
+  function moveSv(e) {
+    e.preventDefault();
+    const p = _scpRelPos(sv, e);
+    _scpS = p.x / sv.width;
+    _scpV = 1 - p.y / sv.height;
+    _scpSync();
+  }
+  function moveHue(e) {
+    e.preventDefault();
+    _scpH = (_scpRelPos(hue, e).x / hue.width) * 360;
+    _scpPaintSv();
+    _scpSync();
+  }
+
+  sv.addEventListener('mousedown',  e => { _scpSvDrag  = true; moveSv(e); });
+  sv.addEventListener('touchstart', e => { _scpSvDrag  = true; moveSv(e); }, {passive: false});
+  hue.addEventListener('mousedown',  e => { _scpHueDrag = true; moveHue(e); });
+  hue.addEventListener('touchstart', e => { _scpHueDrag = true; moveHue(e); }, {passive: false});
+
+  document.addEventListener('mousemove', e => {
+    if (_scpSvDrag)  moveSv(e);
+    if (_scpHueDrag) moveHue(e);
+  });
+  document.addEventListener('touchmove', e => {
+    if (_scpSvDrag)  moveSv(e);
+    if (_scpHueDrag) moveHue(e);
+  }, {passive: false});
+  document.addEventListener('mouseup',  () => { _scpSvDrag = false; _scpHueDrag = false; });
+  document.addEventListener('touchend', () => { _scpSvDrag = false; _scpHueDrag = false; });
+
+  sv.dataset.bound = '1';
+}
+
+function scpHexInput(val) {
+  const hex = stageNormalizeHex(val.length === 6 ? '#' + val : val);
+  if (!hex) return;
+  const rgb = _scpHexToRgb(hex);
+  if (!rgb) return;
+  [_scpH, _scpS, _scpV] = _scpRgbToHsv(...rgb);
+  _scpPaintSv();
+  _scpSync();
+}
+
+async function scpEyedropper() {
+  if (!window.EyeDropper) { toast('EyeDropper não suportado neste navegador.', 'wn'); return; }
+  try {
+    const {sRGBHex} = await new EyeDropper().open();
+    const rgb = _scpHexToRgb(sRGBHex);
+    if (!rgb) return;
+    [_scpH, _scpS, _scpV] = _scpRgbToHsv(...rgb);
+    _scpPaintSv();
+    _scpSync();
+  } catch (_) {}
 }
 
 function stageOpenColorPicker(inputId, buttonId) {
-  const input = document.getElementById(inputId);
+  const input   = document.getElementById(inputId);
   const overlay = document.getElementById('stage-color-overlay');
   if (!input || !overlay) return;
-  stageRenderColorGrid();
-  const current = stageNormalizeHex(input.value) || '#9BC2E6';
-  stageColorPickerState = { inputId, buttonId, value: current };
-  stagePaintColorPicker(current);
+  const hex = stageNormalizeHex(input.value) || '#9BC2E6';
+  const rgb = _scpHexToRgb(hex);
+  [_scpH, _scpS, _scpV] = rgb ? _scpRgbToHsv(...rgb) : [210, 0.36, 0.9];
+  stageColorPickerState = { inputId, buttonId, value: hex };
   overlay.classList.add('open');
   document.body.classList.add('stage-color-open');
-}
-
-function stageSetPendingColor(value) {
-  if (!stageColorPickerState) return;
-  const hex = stageNormalizeHex(value);
-  if (!hex) return;
-  stageColorPickerState.value = hex;
-  stagePaintColorPicker(hex);
+  requestAnimationFrame(() => {
+    _scpPaintHue();
+    _scpPaintSv();
+    _scpBindEvents();
+    _scpSync();
+  });
 }
 
 function stageApplyColorPicker() {

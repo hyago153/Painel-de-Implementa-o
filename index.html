@@ -921,17 +921,29 @@
 <div id="stage-color-overlay" class="stage-color-overlay" onclick="if(event.target===this)stageCloseColorPicker()">
   <div class="stage-color-modal" role="dialog" aria-modal="true" aria-labelledby="stage-color-title">
     <h3 id="stage-color-title">Selecionar cor</h3>
-    <div class="stage-color-grid" id="stage-color-grid" aria-label="Cores rapidas"></div>
-    <div class="stage-color-meta">
-      <label class="stage-color-custom">
-        <span>Personalizado</span>
-        <input id="stage-color-custom-input" class="form-input" placeholder="#RRGGBB" maxlength="7"
-               oninput="stageSetPendingColor(this.value)" />
-      </label>
-      <div class="stage-color-selected">
-        <span>Cor escolhida</span>
-        <div id="stage-color-selected-swatch" class="stage-color-selected-swatch" aria-hidden="true"></div>
+    <div class="scp-canvas-wrap">
+      <canvas id="scp-canvas" width="280" height="160"></canvas>
+      <div id="scp-thumb" class="scp-thumb" aria-hidden="true"></div>
+    </div>
+    <div class="scp-hue-wrap">
+      <canvas id="scp-hue" width="280" height="16"></canvas>
+      <div id="scp-hue-thumb" class="scp-hue-thumb" aria-hidden="true"></div>
+    </div>
+    <div class="scp-bottom">
+      <div id="scp-preview" class="scp-preview" aria-hidden="true"></div>
+      <div class="scp-hex-wrap">
+        <span class="scp-hex-label">#</span>
+        <input id="scp-hex-input" class="scp-hex-input" maxlength="6"
+               spellcheck="false" autocomplete="off" oninput="scpHexInput(this.value)" />
       </div>
+      <button type="button" class="scp-eyedropper-btn" title="Conta-gotas"
+              aria-label="Conta-gotas" onclick="scpEyedropper()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/>
+          <path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/>
+        </svg>
+      </button>
     </div>
     <div class="stage-color-actions">
       <button type="button" class="btn sm" onclick="stageCloseColorPicker()">Cancelar</button>
