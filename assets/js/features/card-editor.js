@@ -11,6 +11,7 @@ let cardAllFields    = {};
 let cardLoaded       = false;
 let cardSelectedHiddenFields = new Set();
 let cardExpandedHiddenFields = new Set();
+let cardSelectedSectionFields = new Set();
 let cardHiddenBulkCollapsed = false;
 let cardHiddenPanelCollapsed = false;
 let cardEditFieldRef = null;
@@ -98,6 +99,7 @@ function cardSyncContextUI() {
     cardAllFields = {};
     cardSelectedHiddenFields.clear();
     cardExpandedHiddenFields.clear();
+    cardSelectedSectionFields.clear();
     cardLoaded = false;
     cardLastContextKey = key;
   }
@@ -127,6 +129,7 @@ function cardSelectPipeline(value) {
   cardAllFields = {};
   cardSelectedHiddenFields.clear();
   cardExpandedHiddenFields.clear();
+  cardSelectedSectionFields.clear();
   cardLoaded = false;
   cardLastContextKey = cardContextKey(cardGetContext(false));
 }
@@ -441,12 +444,16 @@ function cardIcon(name) {
 function cardRenderSections() {
   const container = document.getElementById('card-sections-container');
   if (!cardConfig.length) {
+    cardSelectedSectionFields.clear();
     container.innerHTML = '<div class="section-empty">Nenhuma seção. Adicione uma abaixo.</div>';
     return;
   }
+  cardPruneSelectedSectionFields();
   container.innerHTML = cardConfig.map((sec, si) => {
     const count = (sec.elements || []).length;
     const collapsed = !!sec._collapsed;
+    const selectedCount = cardGetSectionSelectedCount(si);
+    const allSelected = count > 0 && selectedCount === count;
     const fieldsHtml = count === 0
       ? '<div class="section-empty">Nenhum campo nesta seção. Arraste campos ocultos para cá.</div>'
       : `<table class="card-fields-table">
@@ -457,6 +464,8 @@ function cardRenderSections() {
               const fixed  = el.optionFlags === 1;
               const typeL  = TIPO_LABEL[finfo.type] || finfo.type;
               const isCustomEditable = finfo.origin === 'custom' && finfo.rawId;
+              const fieldIdArg = JSON.stringify(el.name);
+              const selected = cardSelectedSectionFields.has(el.name);
               const optBadges = [];
               if (finfo.mandatory) optBadges.push('Obrigatrio');
               if (finfo.multiple) optBadges.push('Mltiplo');
@@ -472,11 +481,16 @@ function cardRenderSections() {
                    <button class="card-action-btn del" onclick="cardDeleteField(${si},${fi})">Excluir</button>`
                 : '<span style="color:#ccc;font-size:11px;">Nativo</span>';
               return `
-                <tr>
+                <tr class="${selected ? 'selected' : ''}">
                   <td>
-                    <div class="field-name-cell">
+                    <div class="field-selectable-cell">
+                      <label class="section-field-check" title="Selecionar campo">
+                        <input type="checkbox" ${selected ? 'checked' : ''} onchange='cardToggleSectionField(${fieldIdArg}, this.checked)' />
+                      </label>
+                      <div class="field-name-cell">
                       <span class="field-label-txt">${escHtml(finfo.label)}</span>
                       <span class="field-id-mono">${escHtml(el.name)}</span>
+                      </div>
                     </div>
                   </td>
                   <td><span class="field-type-badge">${escHtml(typeL)}</span></td>
@@ -511,6 +525,11 @@ function cardRenderSections() {
           <button class="icon-btn section-collapse-btn" onclick="cardToggleSectionCollapse(${si})" title="${collapsed ? 'Expandir secao' : 'Minimizar secao'}" aria-label="${collapsed ? 'Expandir secao' : 'Minimizar secao'}" aria-expanded="${collapsed ? 'false' : 'true'}">${cardIcon(collapsed ? 'expand' : 'collapse')}</button>
           <div class="card-section-title" id="card-sec-title-${si}" onclick="cardShowRenameSection(${si})" title="Clique para renomear">${escHtml(sec.title || sec.name || 'Seção')}</div>
           <span class="card-section-count">${count} campo${count !== 1 ? 's' : ''}</span>
+          <label class="section-bulk-check ${count === 0 ? 'disabled' : ''}">
+            <input type="checkbox" ${allSelected ? 'checked' : ''} ${count === 0 ? 'disabled' : ''} onchange="cardToggleAllSectionFields(${si}, this.checked)" />
+            Selecionar se&ccedil;&atilde;o
+          </label>
+          <button class="card-action-btn section-hide-selected" onclick="cardHideSelectedSectionFields(${si})" ${selectedCount === 0 ? 'disabled' : ''}>Ocultar selecionados${selectedCount ? ` (${selectedCount})` : ''}</button>
           <div style="display:flex;gap:4px;">
             <button class="move-btn" onclick="cardMoveSectionUp(${si})" ${si===0?'disabled':''} title="Subir seção" aria-label="Subir seção">${cardIcon('up')}</button>
             <button class="move-btn" onclick="cardMoveSectionDown(${si})" ${si===cardConfig.length-1?'disabled':''} title="Descer seção" aria-label="Descer seção">${cardIcon('down')}</button>
@@ -620,6 +639,50 @@ function cardRenderHiddenFields() {
   }).join('') : '<div style="font-size:12px;color:#aaa;text-align:center;padding:8px;">Nenhum campo encontrado no filtro.</div>';
 
   list.innerHTML = actionsHtml + rowsHtml;
+}
+
+function cardPruneSelectedSectionFields() {
+  const visibleIds = new Set();
+  cardConfig.forEach(sec => (sec.elements || []).forEach(el => visibleIds.add(el.name)));
+  cardSelectedSectionFields = new Set([...cardSelectedSectionFields].filter(id => visibleIds.has(id)));
+}
+
+function cardGetSectionSelectedCount(sectionIdx) {
+  const sec = cardConfig[sectionIdx];
+  if (!sec || !Array.isArray(sec.elements)) return 0;
+  return sec.elements.filter(el => cardSelectedSectionFields.has(el.name)).length;
+}
+
+function cardToggleSectionField(fieldId, checked) {
+  if (checked) cardSelectedSectionFields.add(fieldId);
+  else cardSelectedSectionFields.delete(fieldId);
+  cardRenderSections();
+}
+
+function cardToggleAllSectionFields(sectionIdx, checked) {
+  const sec = cardConfig[sectionIdx];
+  if (!sec || !Array.isArray(sec.elements)) return;
+  sec.elements.forEach(el => {
+    if (checked) cardSelectedSectionFields.add(el.name);
+    else cardSelectedSectionFields.delete(el.name);
+  });
+  cardRenderSections();
+}
+
+function cardHideSelectedSectionFields(sectionIdx) {
+  const sec = cardConfig[sectionIdx];
+  if (!sec || !Array.isArray(sec.elements)) return;
+  const before = sec.elements.length;
+  sec.elements = sec.elements.filter(el => !cardSelectedSectionFields.has(el.name));
+  const hiddenCount = before - sec.elements.length;
+  if (!hiddenCount) {
+    toast('Selecione pelo menos um campo da se\u00e7\u00e3o.', 'wn');
+    return;
+  }
+  cardSelectedSectionFields.clear();
+  cardMarkUnsaved();
+  cardRender();
+  toast(`${hiddenCount} campo${hiddenCount !== 1 ? 's' : ''} ocultado${hiddenCount !== 1 ? 's' : ''}.`, 'ok');
 }
 
 function cardHiddenFieldMatchesFilters(id, info, filter, originFilter) {
@@ -780,7 +843,8 @@ function cardToggleFixed(si, fi) {
 }
 
 function cardHideField(si, fi) {
-  cardConfig[si].elements.splice(fi, 1);
+  const removed = cardConfig[si].elements.splice(fi, 1)[0];
+  if (removed) cardSelectedSectionFields.delete(removed.name);
   cardMarkUnsaved();
   cardRender();
 }
@@ -956,6 +1020,7 @@ async function cardDeleteFieldLegacy(si, fi) {
     });
     delete cardAllFields[el.name];
     cardSelectedHiddenFields.delete(el.name);
+    cardSelectedSectionFields.delete(el.name);
     cardMarkUnsaved();
     cardRender();
     toast('Campo excludo com sucesso.', 'ok');
@@ -1117,6 +1182,7 @@ async function cardDeleteField(si, fi) {
     });
     delete cardAllFields[el.name];
     cardSelectedHiddenFields.delete(el.name);
+    cardSelectedSectionFields.delete(el.name);
     cardMarkUnsaved();
     cardRender();
     toast('Campo excludo com sucesso.', 'ok');
