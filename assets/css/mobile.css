@@ -465,6 +465,11 @@
     grid-template-columns: minmax(0, 1fr) 42px;
   }
 
+  .color-input-wrap .stage-color-trigger {
+    width: 42px;
+    height: 38px;
+  }
+
   .color-input-wrap input[type=color] {
     width: 42px;
     height: 38px;
@@ -803,9 +808,31 @@
 
   #campos-edit-overlay,
   #card-edit-overlay,
-  #spa-type-overlay {
+  #spa-type-overlay,
+  #stage-color-overlay {
     align-items: flex-end;
     padding: 0;
+  }
+
+  .stage-color-modal {
+    width: 100%;
+    max-width: none;
+    border-radius: 22px 22px 0 0;
+    padding: 22px 24px calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .stage-color-grid {
+    grid-template-columns: repeat(4, 44px);
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .stage-color-meta {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .stage-color-custom input {
+    width: min(172px, 100%);
   }
 
   .campos-edit-box,

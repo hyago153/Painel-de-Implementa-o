@@ -6,6 +6,8 @@ let pipSelectedId   = null;
 let pipSelectedName = '';
 let pipLastContextKey = '';
 const stageCollapsedIds = new Set();
+const stageColorPresets = ['#FF0000', '#00F5F0', '#0000FF', '#00FF00', '#FF00FF', '#FFFF00', '#000000', '#FFFFFF'];
+let stageColorPickerState = null;
 
 function pipMode() {
   return window.EntityContext ? window.EntityContext.getCurrentMode() : 'crm';
@@ -331,9 +333,10 @@ async function pipLoadStages() {
               <input class="form-input" id="stage-rename-name-${escHtml(numId)}" value="${escHtml(name)}" placeholder="Nome" style="max-width:180px;" />
               <div class="color-input-wrap">
                 <input class="form-input" id="stage-rename-hex-${escHtml(numId)}" value="${escHtml(color)}" placeholder="#RRGGBB" style="max-width:100px;"
-                  oninput="document.getElementById('stage-rename-pick-${escHtml(numId)}').value=this.value" />
-                <input type="color" id="stage-rename-pick-${escHtml(numId)}" value="${escHtml(color)}"
-                  oninput="document.getElementById('stage-rename-hex-${escHtml(numId)}').value=this.value" />
+                  oninput="stageSyncColorButton('stage-rename-swatch-${escHtml(numId)}', this.value)" />
+                <button id="stage-rename-swatch-${escHtml(numId)}" class="stage-color-trigger" type="button"
+                  style="--stage-color:${escHtml(color)};" title="Selecionar cor" aria-label="Selecionar cor"
+                  onclick="stageOpenColorPicker('stage-rename-hex-${escHtml(numId)}','stage-rename-swatch-${escHtml(numId)}')"></button>
               </div>
               <button class="btn sm primary" onclick="stageRename(${pipJsArg(numId)})">Salvar</button>
               <button class="btn sm" onclick="stageToggleRename(${pipJsArg(numId)})">Cancelar</button>
@@ -410,6 +413,81 @@ function stageToggleRename(stId) {
   const row = document.getElementById(`stage-rename-row-${stId}`);
   if (!row) return;
   row.style.display = row.style.display === 'none' ? '' : 'none';
+}
+
+function stageNormalizeHex(value) {
+  const raw = String(value || '').trim();
+  const withHash = raw.startsWith('#') ? raw : `#${raw}`;
+  if (/^#[0-9a-fA-F]{6}$/.test(withHash)) return withHash.toUpperCase();
+  return '';
+}
+
+function stageSyncColorButton(buttonId, value) {
+  const btn = document.getElementById(buttonId);
+  const hex = stageNormalizeHex(value);
+  if (btn && hex) btn.style.setProperty('--stage-color', hex);
+}
+
+function stageRenderColorGrid() {
+  const grid = document.getElementById('stage-color-grid');
+  if (!grid || grid.dataset.ready === '1') return;
+  grid.innerHTML = stageColorPresets.map(color => `
+    <button type="button" class="stage-color-swatch" style="--stage-color:${color};"
+      data-color="${color}" aria-label="Selecionar ${color}" onclick="stageSetPendingColor('${color}')"></button>
+  `).join('');
+  grid.dataset.ready = '1';
+}
+
+function stagePaintColorPicker(hex) {
+  const selected = stageNormalizeHex(hex) || '#9BC2E6';
+  const custom = document.getElementById('stage-color-custom-input');
+  const preview = document.getElementById('stage-color-selected-swatch');
+  const grid = document.getElementById('stage-color-grid');
+  if (custom) custom.value = selected;
+  if (preview) preview.style.setProperty('--stage-color', selected);
+  if (grid) {
+    grid.querySelectorAll('.stage-color-swatch').forEach(btn => {
+      btn.classList.toggle('active', stageNormalizeHex(btn.dataset.color) === selected);
+    });
+  }
+}
+
+function stageOpenColorPicker(inputId, buttonId) {
+  const input = document.getElementById(inputId);
+  const overlay = document.getElementById('stage-color-overlay');
+  if (!input || !overlay) return;
+  stageRenderColorGrid();
+  const current = stageNormalizeHex(input.value) || '#9BC2E6';
+  stageColorPickerState = { inputId, buttonId, value: current };
+  stagePaintColorPicker(current);
+  overlay.classList.add('open');
+  document.body.classList.add('stage-color-open');
+}
+
+function stageSetPendingColor(value) {
+  if (!stageColorPickerState) return;
+  const hex = stageNormalizeHex(value);
+  if (!hex) return;
+  stageColorPickerState.value = hex;
+  stagePaintColorPicker(hex);
+}
+
+function stageApplyColorPicker() {
+  if (!stageColorPickerState) return;
+  const input = document.getElementById(stageColorPickerState.inputId);
+  if (input) {
+    input.value = stageColorPickerState.value;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  stageSyncColorButton(stageColorPickerState.buttonId, stageColorPickerState.value);
+  stageCloseColorPicker();
+}
+
+function stageCloseColorPicker() {
+  const overlay = document.getElementById('stage-color-overlay');
+  if (overlay) overlay.classList.remove('open');
+  document.body.classList.remove('stage-color-open');
+  stageColorPickerState = null;
 }
 
 async function stageRename(stId) {
@@ -489,3 +567,8 @@ async function stageCreate() {
 window.pipSyncContextUI = pipSyncContextUI;
 window.stageToggleMobileRow = stageToggleMobileRow;
 window.stageToggleAllMobileRows = stageToggleAllMobileRows;
+window.stageOpenColorPicker = stageOpenColorPicker;
+window.stageCloseColorPicker = stageCloseColorPicker;
+window.stageSetPendingColor = stageSetPendingColor;
+window.stageApplyColorPicker = stageApplyColorPicker;
+window.stageSyncColorButton = stageSyncColorButton;

@@ -366,9 +366,10 @@
                 <label class="form-label">Cor (hex)</label>
                 <div class="color-input-wrap">
                   <input id="stage-new-color-hex" class="form-input" placeholder="#00AABB" value="#9BC2E6"
-                    oninput="document.getElementById('stage-new-color-pick').value=this.value" style="flex:1;" />
-                  <input id="stage-new-color-pick" type="color" value="#9BC2E6"
-                    oninput="document.getElementById('stage-new-color-hex').value=this.value" />
+                    oninput="stageSyncColorButton('stage-new-color-swatch', this.value)" style="flex:1;" />
+                  <button id="stage-new-color-swatch" class="stage-color-trigger" type="button"
+                    style="--stage-color:#9BC2E6;" title="Selecionar cor" aria-label="Selecionar cor"
+                    onclick="stageOpenColorPicker('stage-new-color-hex','stage-new-color-swatch')"></button>
                 </div>
               </div>
               <div class="form-group" style="margin:0;">
@@ -915,6 +916,29 @@
 <script src="assets/js/features/massa.js"></script>
 <script src="assets/js/features/card-editor.js"></script>
 <script src="assets/js/app.js"></script>
+
+<!-- MODAL: Selecionar cor do estagio -->
+<div id="stage-color-overlay" class="stage-color-overlay" onclick="if(event.target===this)stageCloseColorPicker()">
+  <div class="stage-color-modal" role="dialog" aria-modal="true" aria-labelledby="stage-color-title">
+    <h3 id="stage-color-title">Selecionar cor</h3>
+    <div class="stage-color-grid" id="stage-color-grid" aria-label="Cores rapidas"></div>
+    <div class="stage-color-meta">
+      <label class="stage-color-custom">
+        <span>Personalizado</span>
+        <input id="stage-color-custom-input" class="form-input" placeholder="#RRGGBB" maxlength="7"
+               oninput="stageSetPendingColor(this.value)" />
+      </label>
+      <div class="stage-color-selected">
+        <span>Cor escolhida</span>
+        <div id="stage-color-selected-swatch" class="stage-color-selected-swatch" aria-hidden="true"></div>
+      </div>
+    </div>
+    <div class="stage-color-actions">
+      <button type="button" class="btn sm" onclick="stageCloseColorPicker()">Cancelar</button>
+      <button type="button" class="btn sm primary" onclick="stageApplyColorPicker()">Definir</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: Criar/editar processo inteligente -->
 <div id="spa-type-overlay" onclick="if(event.target===this)spaTypeClose()">
