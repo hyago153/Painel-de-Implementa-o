@@ -608,6 +608,16 @@ button, input, select, textarea { font-family: inherit; }
 .card-fields-table td {
   border-bottom-color: rgba(255,255,255,.035);
 }
+.csv-preview-table td {
+  color: rgba(255,255,255,.84) !important;
+}
+.csv-preview-table th {
+  color: rgba(255,255,255,.68) !important;
+}
+.csv-preview-table .err-row td {
+  background: rgba(239,68,68,.14) !important;
+  color: #fecaca !important;
+}
 .campos-table td:nth-child(2),
 .campos-table td:nth-child(2) div,
 .campos-table td:nth-child(6) {
