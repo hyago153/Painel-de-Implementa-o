@@ -508,12 +508,11 @@ function _scpSync() {
   const preview   = document.getElementById('scp-preview');
   const hexInp    = document.getElementById('scp-hex-input');
   if (svCanvas && thumb) {
-    const r = svCanvas.getBoundingClientRect();
-    thumb.style.left = `${_scpS * r.width}px`;
-    thumb.style.top  = `${(1 - _scpV) * r.height}px`;
+    thumb.style.left = `${_scpS * 100}%`;
+    thumb.style.top  = `${(1 - _scpV) * 100}%`;
   }
   if (hCanvas && hThumb) {
-    hThumb.style.left = `${(_scpH / 360) * hCanvas.getBoundingClientRect().width}px`;
+    hThumb.style.left = `${(_scpH / 360) * 100}%`;
   }
   if (preview) preview.style.background = hex;
   if (hexInp && document.activeElement !== hexInp) hexInp.value = hex.slice(1);
