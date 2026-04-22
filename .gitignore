@@ -1,6 +1,8 @@
 .agents/
 plugins/
 ROTEIRO_PUBLICACAO_GITHUB.md
+logo_expandida.png
+logo_reduzida.png
 
 # Local/editor files
 .DS_Store
