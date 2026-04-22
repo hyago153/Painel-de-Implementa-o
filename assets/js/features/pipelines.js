@@ -435,7 +435,7 @@ function _scpHsvToRgb(h, s, v) {
   const i = Math.floor(h / 60) % 6;
   const f = h / 60 - Math.floor(h / 60);
   const p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
-  return [[v,t,p,p,q,v],[q,v,v,t,p,p],[p,p,q,v,v,t]].map(a => Math.round(a[i] * 255));
+  return [[v,q,p,p,t,v],[t,v,v,q,p,p],[p,p,t,v,v,q]].map(a => Math.round(a[i] * 255));
 }
 
 function _scpRgbToHsv(r, g, b) {
