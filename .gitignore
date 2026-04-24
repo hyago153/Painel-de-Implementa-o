@@ -8,3 +8,10 @@ logo_reduzida.png
 .DS_Store
 Thumbs.db
 *.log
+
+# Local dependencies and generated planning artifacts
+node_modules/
+outputs/
+mockups/
+roteiro/
+build_pipeline_templates.mjs

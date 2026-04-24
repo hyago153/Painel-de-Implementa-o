@@ -294,9 +294,15 @@
 
         <!-- Card 2: Lista de pipelines -->
         <div class="card">
-          <div class="card-title" style="justify-content:space-between;">
+          <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
             <span style="display:flex;align-items:center;gap:7px;"><div class="card-accent"></div>Pipelines</span>
-            <button class="btn sm" onclick="pipLoad()">↺ Recarregar</button>
+            <div class="pip-header-actions">
+              <button class="btn sm outline-yellow" onclick="pipOpenModal('pip-modal-model')">Modelo</button>
+              <button class="btn sm" onclick="pipOpenModal('pip-modal-export')">Exportar</button>
+              <button class="btn sm outline-blue" onclick="pipSelectAll()">Selecionar todas</button>
+              <button class="btn sm outline-blue" onclick="pipOpenModal('pip-modal-import')">Importar</button>
+              <button class="btn sm" onclick="pipLoad()">↺ Recarregar</button>
+            </div>
           </div>
           <div class="pip-list" id="pip-list">
             <div style="font-size:12px;color:#aaa;">Clique em "Recarregar" para carregar os pipelines.</div>
@@ -387,6 +393,107 @@
           </div>
         </div>
 
+      </div>
+
+      <div class="sel-floating" id="pip-sel-bar">
+        <span class="sel-text"><span id="pip-sel-count">0</span> pipeline(s) selecionada(s)</span>
+        <div class="sel-divider"></div>
+        <button class="btn sm" onclick="pipSelectAll()">Selecionar todas</button>
+        <button class="btn sm" onclick="pipOpenModal('pip-modal-export','selected')">Exportar selecionadas</button>
+        <button class="btn sm danger-outline" onclick="pipClearSelection()">Limpar selecao</button>
+      </div>
+
+      <div class="modal-overlay pip-modal-overlay" id="pip-modal-export" onclick="if(event.target===this)pipCloseModal('pip-modal-export')">
+        <div class="modal-box pip-modal-box" role="dialog" aria-modal="true" aria-labelledby="pip-export-title">
+          <div class="modal-header">
+            <div class="modal-title" id="pip-export-title">Exportar Pipelines</div>
+            <button class="modal-close" onclick="pipCloseModal('pip-modal-export')" aria-label="Fechar">x</button>
+          </div>
+          <div class="modal-section">
+            <div class="modal-section-title">Modo de exportacao</div>
+            <div class="export-options">
+              <label class="export-option selected" id="pip-export-active-option">
+                <input type="radio" name="pip-export-mode" value="active" checked onchange="pipSyncExportOptions()" />
+                <span class="export-option-body">
+                  <span class="export-option-title">Pipeline aberta (ativa)</span>
+                  <span class="export-option-desc">Exporta a pipeline aberta nos estagios, com todos os seus estagios.</span>
+                </span>
+              </label>
+              <label class="export-option" id="pip-export-selected-option">
+                <input type="radio" name="pip-export-mode" value="selected" onchange="pipSyncExportOptions()" />
+                <span class="export-option-body">
+                  <span class="export-option-title">Pipelines selecionadas</span>
+                  <span class="export-option-desc">Exporta todas as pipelines marcadas na lista.</span>
+                </span>
+              </label>
+            </div>
+          </div>
+          <div class="modal-section">
+            <div class="modal-section-title">Formato</div>
+            <div class="pip-modal-note">Arquivo .xlsx com abas Pipelines e Estagios, cabecalhos em portugues, semantica traduzida e codigos sugeridos preenchidos.</div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn sm" onclick="pipCloseModal('pip-modal-export')">Cancelar</button>
+            <button class="btn sm primary" onclick="pipExportXlsx()">Gerar e baixar .xlsx</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-overlay pip-modal-overlay" id="pip-modal-model" onclick="if(event.target===this)pipCloseModal('pip-modal-model')">
+        <div class="modal-box pip-modal-box" role="dialog" aria-modal="true" aria-labelledby="pip-model-title">
+          <div class="modal-header">
+            <div class="modal-title" id="pip-model-title">Baixar Modelo de Importacao</div>
+            <button class="modal-close" onclick="pipCloseModal('pip-modal-model')" aria-label="Fechar">x</button>
+          </div>
+          <div class="modal-section">
+            <div class="modal-section-title">Modelos disponiveis</div>
+            <button type="button" class="model-row" onclick="pipDownloadModel()">
+              <span class="model-row-icon">XLSX</span>
+              <span class="model-row-body">
+                <span class="model-row-title">Modelo unico de importacao</span>
+                <span class="model-row-desc">Abas Instrucoes, Pipelines e Estagios prontas para preencher.</span>
+              </span>
+              <span class="model-row-action">Baixar</span>
+            </button>
+          </div>
+          <div class="modal-section">
+            <div class="modal-section-title">Referencia rapida</div>
+            <div class="pip-modal-note">
+              Obrigatorios: chave_pipeline, nome_pipeline, nome_etapa, semantica.<br>
+              Semantica aceita: ANDAMENTO, SUCESSO, FALHA.<br>
+              Codigos sugeridos: PIP_0001 e STG_XX_YY, onde XX e o numero/ID da pipeline e YY e o numero do estagio.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn sm" onclick="pipCloseModal('pip-modal-model')">Fechar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-overlay pip-modal-overlay" id="pip-modal-import" onclick="if(event.target===this)pipCloseModal('pip-modal-import')">
+        <div class="modal-box pip-modal-box pip-modal-wide" role="dialog" aria-modal="true" aria-labelledby="pip-import-title">
+          <div class="modal-header">
+            <div class="modal-title" id="pip-import-title">Importar Pipelines</div>
+            <button class="modal-close" onclick="pipCloseModal('pip-modal-import')" aria-label="Fechar">x</button>
+          </div>
+          <div class="modal-section">
+            <div class="modal-section-title">Enviar planilha</div>
+            <label class="drop-zone" id="pip-import-drop">
+              <input id="pip-import-file" type="file" accept=".xlsx" onchange="pipHandleImportFile(this.files && this.files[0])" hidden />
+              <span class="drop-zone-icon">↑</span>
+              <span class="drop-zone-text">Arraste o arquivo .xlsx aqui ou clique para selecionar</span>
+              <span class="drop-zone-hint">Abas esperadas: Pipelines e Estagios</span>
+            </label>
+          </div>
+          <div class="modal-section">
+            <div class="modal-section-title">Previa e validacao</div>
+            <div id="pip-import-preview" class="pip-import-preview">Envie uma planilha para validar antes de executar.</div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn sm" onclick="pipCloseModal('pip-modal-import')">Cancelar</button>
+            <button class="btn sm primary" id="pip-import-run-btn" onclick="pipRunImport()" disabled>Executar importacao</button>
+          </div>
+        </div>
       </div>
 
       <!-- ── CAMPOS ──────────────────────────────────────── -->
