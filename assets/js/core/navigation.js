@@ -2,6 +2,7 @@
 const panelMeta = {
   overview:   { title: 'Visão geral',           sub: 'Painel de Implementação',        action: 'Testar conexão' },
   pipelines:  { title: 'Pipelines',             sub: 'Gerenciar funis e estágios',     action: '+ Novo pipeline' },
+  projetos:   { title: 'Projetos',              sub: 'Workgroups e Kanban',            action: '+ Novo projeto' },
   campos:     { title: 'Consulta de campos',    sub: 'Nativos e personalizados',       action: 'Exportar CSV' },
   criar:      { title: 'Criar campo',           sub: 'Campo individual',               action: 'Documentao API' },
   massa:      { title: 'Criar em massa',        sub: 'Formulrio e CSV',               action: 'Baixar template XLS' },
@@ -92,6 +93,7 @@ function globalSearchKey(event) {
   const matches = [
     ['overview', ['visao', 'viso', 'geral', 'inicio', 'dashboard', 'painel']],
     ['pipelines', ['pipeline', 'pipelines', 'funil', 'funis', 'estágio', 'estágio']],
+    ['projetos', ['projeto', 'projetos', 'workgroup', 'kanban', 'membro', 'membros', 'sonet']],
     ['campos', ['campo', 'campos', 'consulta', 'customizado', 'personalizado']],
     ['criar', ['criar', 'novo', 'field', 'individual']],
     ['massa', ['massa', 'csv', 'xls', 'xlsx', 'planilha', 'importar']],
@@ -133,6 +135,7 @@ function navigate(id) {
   if (id === 'overview' && window.spaOverviewEnsureLoaded) spaOverviewEnsureLoaded();
   if (window.spaOverviewModeSync) spaOverviewModeSync();
   if (id === 'pipelines' && window.pipSyncContextUI) pipSyncContextUI();
+  if (id === 'projetos' && window.projSyncContextUI) projSyncContextUI();
   if (id === 'campos' && window.camposSyncContextUI) camposSyncContextUI();
   if (id === 'criar' && window.criarSyncContextUI) criarSyncContextUI();
   if (id === 'massa' && window.massaSyncContextUI) massaSyncContextUI();
@@ -194,6 +197,10 @@ function tbAction() {
     case 'pipelines':
       document.getElementById('pip-new-name')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       document.getElementById('pip-new-name')?.focus();
+      break;
+    case 'projetos':
+      document.getElementById('proj-new-name')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('proj-new-name')?.focus();
       break;
     case 'campos':     camposAllFields.length > 0 ? camposExportCSV() : camposLoad(); break;
     case 'criar':      window.open('https://apidocs.bitrix24.com/api-reference/crm/userfields/'); break;

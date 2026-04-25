@@ -760,9 +760,9 @@ function stageBuildStatusId(name) {
 async function stageCreate() {
   const name  = document.getElementById('stage-new-name').value.trim();
   const sort  = parseInt(document.getElementById('stage-new-sort').value, 10) || 100;
-  const color = document.getElementById('stage-new-color-hex').value.trim() || '#9BC2E6';
   const stypeRaw = document.getElementById('stage-new-type').value;
-  const semantics = stypeRaw === 'SUCCESS' ? 'S' : stypeRaw === 'FAIL' ? 'F' : null;
+  const semantics = stageTypeToSemantics(stypeRaw);
+  const color = stageNormalizeHex(document.getElementById('stage-new-color-hex').value) || pipDefaultStageColor(semantics);
 
   if (!name) { toast('Informe o nome do estágio.', 'wn'); return; }
 
@@ -814,6 +814,16 @@ function pipSemanticToApi(value) {
   if (raw === 'SUCESSO' || raw === 'SUCCESS') return 'S';
   if (raw === 'FALHA' || raw === 'FAIL') return 'F';
   return null;
+}
+
+function pipDefaultStageColor(semantics = null) {
+  if (semantics === 'S') return '#22C55E';
+  if (semantics === 'F') return '#EF4444';
+  return '#9BC2E6';
+}
+
+function stageTypeToSemantics(value) {
+  return value === 'SUCCESS' ? 'S' : value === 'FAIL' ? 'F' : null;
 }
 
 function pipPadCode(prefix, index) {
@@ -901,7 +911,7 @@ async function pipUpdateExistingSemanticStage(ctx, stage, row, results) {
 
   const fields = {
     NAME: row.nome_etapa,
-    COLOR: row.cor_hex || (semantics === 'S' ? '#22C55E' : '#EF4444'),
+    COLOR: row.cor_hex || pipDefaultStageColor(semantics),
   };
   const data = await ctx.adapter.updateStage(stageId, fields);
   if (data.error) throw new Error(data.error_description || data.error);
@@ -932,7 +942,7 @@ async function pipUpdateExistingWorkStage(ctx, stage, row, results) {
 
   const fields = {
     NAME: row.nome_etapa,
-    COLOR: row.cor_hex || '#9BC2E6',
+    COLOR: row.cor_hex || pipDefaultStageColor(),
   };
   const data = await ctx.adapter.updateStage(stageId, fields);
   if (data.error) throw new Error(data.error_description || data.error);
@@ -1121,7 +1131,7 @@ function pipValidateImport(pipelineRowsRaw, stageRowsRaw) {
     row.semantica = sem;
     if (row.chave_pipeline && !pipeKeys.has(row.chave_pipeline)) errors.push(`Estagios linha ${line}: chave_pipeline nao existe em Pipelines.`);
     if (row.cor_hex && !stageNormalizeHex(row.cor_hex)) errors.push(`Estagios linha ${line}: cor_hex invalida.`);
-    row.cor_hex = stageNormalizeHex(row.cor_hex) || '#9BC2E6';
+    row.cor_hex = stageNormalizeHex(row.cor_hex) || pipDefaultStageColor(pipSemanticToApi(row.semantica));
   });
 
   const stagesByKey = pipImportGroupStages(stageRows);
@@ -1373,7 +1383,7 @@ async function pipRunImport() {
           STATUS_ID: statusId,
           NAME: row.nome_etapa,
           SORT: parseInt(row.sort, 10) || pipStageImportRank(row),
-          COLOR: row.cor_hex || '#9BC2E6',
+          COLOR: row.cor_hex || pipDefaultStageColor(),
           SEMANTICS: null,
         });
         if (data.error) throw new Error(data.error_description || data.error);
@@ -1392,7 +1402,7 @@ async function pipRunImport() {
           STATUS_ID: statusId,
           NAME: row.nome_etapa,
           SORT: parseInt(row.sort, 10) || pipStageImportRank(row),
-          COLOR: row.cor_hex || (semantics === 'S' ? '#22C55E' : '#EF4444'),
+          COLOR: row.cor_hex || pipDefaultStageColor(semantics),
           SEMANTICS: semantics,
         });
         if (data.error) throw new Error(data.error_description || data.error);
@@ -1436,6 +1446,23 @@ function pipBindImportDrop() {
 
 function stageSetPendingColor() {}
 
+function stageSyncNewTypeColor() {
+  const type = document.getElementById('stage-new-type');
+  const input = document.getElementById('stage-new-color-hex');
+  if (!type || !input) return;
+
+  const current = stageNormalizeHex(input.value);
+  const knownDefaults = [
+    pipDefaultStageColor(),
+    pipDefaultStageColor('S'),
+    pipDefaultStageColor('F'),
+  ];
+  if (current && !knownDefaults.includes(current)) return;
+
+  input.value = pipDefaultStageColor(stageTypeToSemantics(type.value));
+  stageSyncColorButton('stage-new-color-swatch', input.value);
+}
+
 pipBindImportDrop();
 
 window.pipSyncContextUI = pipSyncContextUI;
@@ -1455,5 +1482,6 @@ window.stageToggleAllMobileRows = stageToggleAllMobileRows;
 window.stageOpenColorPicker = stageOpenColorPicker;
 window.stageCloseColorPicker = stageCloseColorPicker;
 window.stageSetPendingColor = stageSetPendingColor;
+window.stageSyncNewTypeColor = stageSyncNewTypeColor;
 window.stageApplyColorPicker = stageApplyColorPicker;
 window.stageSyncColorButton = stageSyncColorButton;

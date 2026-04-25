@@ -6,6 +6,29 @@
 }
 
 @media (max-width: 760px) {
+  #panel-projetos .main-tabs {
+    overflow-x: auto;
+  }
+
+  #panel-projetos .proj-toolbar {
+    align-items: stretch;
+  }
+
+  #panel-projetos .proj-row {
+    display: grid;
+    grid-template-columns: 40px 38px minmax(0, 1fr);
+  }
+
+  #panel-projetos .proj-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  #proj-sel-bar {
+    width: auto;
+    max-width: none;
+  }
+
   html,
   body {
     overflow: hidden;

@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="assets/css/criar-campo.css" />
 <link rel="stylesheet" href="assets/css/shared.css" />
 <link rel="stylesheet" href="assets/css/pipelines.css" />
+<link rel="stylesheet" href="assets/css/projetos.css" />
 <link rel="stylesheet" href="assets/css/campos.css" />
 <link rel="stylesheet" href="assets/css/massa.css" />
 <link rel="stylesheet" href="assets/css/card-editor.css" />
@@ -139,6 +140,11 @@
       <div class="nav-item" id="nav-card" onclick="navigate('card')">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="12" height="12" rx="1.5"/><path d="M4 4h6M4 7h6M4 10h4"/></svg>
         <span class="nav-label">Config. do card</span>
+      </div>
+      <div class="nav-item" id="nav-projetos" onclick="navigate('projetos')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 4v8a1 1 0 001 1h10a1 1 0 001-1V6a1 1 0 00-1-1H7L5.5 3H2a1 1 0 00-1 1z"/></svg>
+        <span class="nav-label">Projetos</span>
+        <span class="nav-badge">NOVO</span>
       </div>
       <div class="nav-section-label" style="margin-top:8px;">Configurações</div>
       <div class="nav-item" id="nav-envmanager" onclick="navigate('envmanager')">
@@ -380,7 +386,7 @@
               </div>
               <div class="form-group" style="margin:0;">
                 <label class="form-label">Tipo</label>
-                <select id="stage-new-type" class="form-select">
+                <select id="stage-new-type" class="form-select" onchange="stageSyncNewTypeColor()">
                   <option value="WORK">WORK (em andamento)</option>
                   <option value="SUCCESS">SUCCESS (ganho)</option>
                   <option value="FAIL">FAIL (perdido)</option>
@@ -497,6 +503,98 @@
       </div>
 
       <!-- ── CAMPOS ──────────────────────────────────────── -->
+      <div class="panel" id="panel-projetos">
+        <div class="main-tabs" role="tablist" aria-label="Projetos">
+          <button class="main-tab active" type="button" onclick="projSwitchTab('projetos',this)">Projetos <span class="tab-count" id="proj-tab-count">0</span></button>
+          <button class="main-tab" type="button" onclick="projSwitchTab('kanban',this)">Kanban <span class="tab-count" id="proj-kanban-count">0</span></button>
+          <button class="main-tab" type="button" onclick="projSwitchTab('membros',this)">Membros <span class="tab-count" id="proj-members-count">0</span></button>
+        </div>
+        <div class="tab-panel active" id="tab-projetos">
+          <div class="card">
+            <div class="proj-toolbar">
+              <div class="toolbar-title"><div class="card-accent"></div>Projetos</div>
+              <button class="btn sm outline-yellow" onclick="projOpenModal('proj-modal-model')">Modelo</button>
+              <button class="btn sm" onclick="projExportXlsx()">Exportar</button>
+              <button class="btn sm outline-blue" onclick="projSelectAll()">Selecionar todas</button>
+              <button class="btn sm outline-blue" onclick="projOpenModal('proj-modal-import')">Importar</button>
+              <button class="btn sm" onclick="projLoad()">↺ Recarregar</button>
+              <div class="toolbar-spacer"></div>
+              <button class="collapse-btn" id="proj-collapse-btn" onclick="projToggleCollapse()" title="Recolher/expandir lista" aria-label="Recolher/expandir lista"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></button>
+            </div>
+            <div class="search-row proj-search-row">
+              <input class="search-input" id="proj-search" placeholder="Buscar por nome, ID, dono ou descricao..." oninput="projRenderList()" />
+              <span class="search-count" id="proj-search-count">0 projetos</span>
+            </div>
+            <div class="proj-list" id="proj-list"><div style="font-size:12px;color:#aaa;">Clique em "Recarregar" para carregar os projetos.</div></div>
+            <div class="proj-pager" id="proj-pager"></div>
+            <div class="proj-banner">Selecione um projeto pela seta para gerenciar Kanban e Membros. Use os checkboxes para acoes em lote.</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-accent"></div>Criar novo projeto</div>
+            <div class="form-grid-2">
+              <div class="form-group" style="margin:0;"><label class="form-label">Nome do projeto</label><input id="proj-new-name" class="form-input" placeholder="Ex: Implantacao CRM - Cliente X" /></div>
+              <div class="form-group" style="margin:0;"><label class="form-label">Proprietario</label><select id="proj-new-owner" class="form-select"><option value="">Carregando usuarios...</option></select></div>
+            </div>
+            <div class="form-group" style="margin-top:12px;"><label class="form-label">Descricao</label><input id="proj-new-desc" class="form-input" placeholder="Descricao do projeto (opcional)" /></div>
+            <div class="form-grid-2" style="margin-top:12px;">
+              <div class="form-group" style="margin:0;"><label class="form-label">Data de inicio</label><input id="proj-new-start" class="form-input" type="date" /></div>
+              <div class="form-group" style="margin:0;"><label class="form-label">Data de termino</label><input id="proj-new-finish" class="form-input" type="date" /></div>
+            </div>
+            <div class="proj-invite-box">
+              <div class="proj-invite-controls">
+                <div class="form-group" style="margin:0;"><label class="form-label">Pessoas para convidar</label><select id="proj-invite-user" class="form-select"><option value="">Carregando usuarios...</option></select></div>
+                <div class="form-group" style="margin:0;"><label class="form-label">Tipo do convite</label><select id="proj-invite-role" class="form-select"><option value="K">Equipe</option><option value="E">Moderador</option></select></div>
+                <button class="btn sm" type="button" onclick="projAddInvite()">+ Adicionar</button>
+              </div>
+              <div class="proj-invite-list" id="proj-invite-list"><div class="proj-invite-empty">Nenhuma pessoa selecionada.</div></div>
+            </div>
+            <div class="proj-form-footer">
+              <label class="flag-check"><input type="checkbox" id="proj-new-visible" checked /> Visivel/publico</label>
+              <label class="flag-check"><input type="checkbox" id="proj-new-opened" /> Adesao livre</label>
+              <label class="form-label proj-inline-select">Permissao para convidar <select id="proj-new-perms" class="form-select"><option value="A">Dono</option><option value="E">Moderadores</option><option value="K">Todos</option></select></label>
+              <button class="btn sm primary" onclick="projCreate()">+ Criar projeto</button>
+            </div>
+          </div>
+        </div>
+        <div class="tab-panel" id="tab-kanban">
+          <div class="card">
+            <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px;"><span style="display:flex;align-items:center;gap:7px;"><div class="card-accent"></div>Etapas do Kanban <span class="proj-context-label" id="proj-kanban-title">Selecione um projeto</span></span><button class="btn sm" onclick="projLoadKanban()">↺ Recarregar</button></div>
+            <div class="proj-anno">A primeira etapa do Kanban nao pode ser excluida diretamente. Etapas com tarefas ativas ou tipo de sistema tambem podem bloquear exclusao.</div>
+            <div class="stage-table-wrap proj-table-wrap"><table class="stage-table proj-stage-table"><thead><tr><th>Etapa</th><th>Tipo</th><th>ID</th><th>Ordem</th><th>Acoes</th></tr></thead><tbody id="proj-kanban-tbody"><tr><td colspan="5">Selecione um projeto na aba Projetos.</td></tr></tbody></table></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-accent"></div>Criar nova etapa</div>
+            <div class="form-grid-3">
+              <div class="form-group" style="margin:0;"><label class="form-label">Nome da etapa</label><input id="proj-stage-name" class="form-input" placeholder="Ex: Em revisao" /></div>
+              <div class="form-group" style="margin:0;"><label class="form-label">Cor</label><input id="proj-stage-color" class="form-input" type="color" value="#59abed" /></div>
+              <div class="form-group" style="margin:0;"><label class="form-label">Inserir apos (AFTER_ID)</label><input id="proj-stage-after" class="form-input" type="number" min="0" value="0" /></div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:12px;"><button class="btn sm primary" onclick="projCreateStage()">+ Criar etapa</button></div>
+          </div>
+        </div>
+        <div class="tab-panel" id="tab-membros">
+          <div class="card">
+            <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px;"><span style="display:flex;align-items:center;gap:7px;"><div class="card-accent"></div>Membros do projeto <span class="proj-context-label" id="proj-members-title">Selecione um projeto</span></span><button class="btn sm" onclick="projLoadMembers()">↺ Recarregar</button></div>
+            <div class="member-list" id="proj-members-list"><div class="proj-empty">Selecione um projeto na aba Projetos.</div></div>
+            <div class="proj-anno">O proprietario nao pode ser removido por este metodo. Para trocar o dono, use Editar projeto.</div>
+          </div>
+          <div class="card">
+            <div class="card-title"><div class="card-accent"></div>Adicionar membro</div>
+            <div class="form-grid-2">
+              <div class="form-group" style="margin:0;"><label class="form-label">Usuario</label><input id="proj-member-user" class="form-input" list="proj-member-users" placeholder="Digite o nome para buscar..." autocomplete="off" /><datalist id="proj-member-users"></datalist></div>
+              <div class="form-group" style="margin:0;"><label class="form-label">Papel</label><select id="proj-member-role" class="form-select"><option value="K">Participante</option><option value="E">Moderador</option></select></div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:12px;"><button class="btn sm primary" onclick="projAddMember()">+ Adicionar membro</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sel-floating" id="proj-sel-bar"><span class="sel-text"><span id="proj-sel-count">0</span> projeto(s) selecionado(s)</span><div class="sel-divider"></div><button class="btn sm" onclick="projSelectAll()">Selecionar todos</button><button class="btn sm" onclick="projExportXlsx(true)">Exportar selecionados</button><button class="btn sm danger-outline" onclick="projDeleteSelected()">Excluir selecionados</button><button class="btn sm" onclick="projClearSelection()">Limpar selecao</button></div>
+
+      <div class="modal-overlay pip-modal-overlay" id="proj-modal-model" onclick="if(event.target===this)projCloseModal('proj-modal-model')"><div class="modal-box pip-modal-box" role="dialog" aria-modal="true"><div class="modal-header"><div class="modal-title">Modelo de Importacao de Projetos</div><button class="modal-close" onclick="projCloseModal('proj-modal-model')" aria-label="Fechar">x</button></div><button type="button" class="model-row" onclick="projDownloadModel()"><span class="model-row-icon">XLSX</span><span class="model-row-body"><span class="model-row-title">Modelo de projetos</span><span class="model-row-desc">Abas Projetos, Membros e Etapas Kanban para criar tudo em lote.</span></span><span class="model-row-action">Baixar</span></button></div></div>
+      <div class="modal-overlay pip-modal-overlay" id="proj-modal-import" onclick="if(event.target===this)projCloseModal('proj-modal-import')"><div class="modal-box pip-modal-box pip-modal-wide" role="dialog" aria-modal="true"><div class="modal-header"><div class="modal-title">Importar Projetos</div><button class="modal-close" onclick="projCloseModal('proj-modal-import')" aria-label="Fechar">x</button></div><label class="drop-zone" id="proj-import-drop"><input type="file" accept=".xlsx" onchange="projHandleImportFile(this.files && this.files[0])" hidden /><span class="drop-zone-icon">↑</span><span class="drop-zone-text">Arraste o .xlsx aqui ou clique para selecionar</span><span class="drop-zone-hint">Abas esperadas: Projetos, Membros e Etapas Kanban</span></label><div class="modal-section" style="margin-top:14px;"><div class="modal-section-title">Previa</div><div id="proj-import-preview" class="pip-import-preview">Envie uma planilha para validar.</div></div><div class="modal-footer"><button class="btn sm" onclick="projCloseModal('proj-modal-import')">Cancelar</button><button class="btn sm primary" id="proj-import-run-btn" onclick="projRunImport()" disabled>Executar importacao</button></div></div></div>
+      <div class="modal-overlay pip-modal-overlay" id="proj-modal-edit" onclick="if(event.target===this)projCloseModal('proj-modal-edit')"><div class="modal-box pip-modal-box" role="dialog" aria-modal="true"><div class="modal-header"><div class="modal-title">Editar Projeto</div><button class="modal-close" onclick="projCloseModal('proj-modal-edit')" aria-label="Fechar">x</button></div><input id="proj-edit-id" type="hidden" /><div class="form-group"><label class="form-label">Nome</label><input id="proj-edit-name" class="form-input" /></div><div class="form-group"><label class="form-label">Descricao</label><input id="proj-edit-desc" class="form-input" /></div><div class="form-grid-2"><div class="form-group"><label class="form-label">Data inicio</label><input id="proj-edit-start" class="form-input" type="date" /></div><div class="form-group"><label class="form-label">Data termino</label><input id="proj-edit-finish" class="form-input" type="date" /></div></div><div class="form-grid-2"><label class="flag-check"><input type="checkbox" id="proj-edit-visible" /> Visivel/publico</label><label class="flag-check"><input type="checkbox" id="proj-edit-opened" /> Adesao livre</label></div><div class="form-group" style="margin-top:12px;"><label class="form-label">Novo proprietario (somente admins)</label><select id="proj-edit-owner" class="form-select"><option value="">Manter proprietario atual</option></select></div><div class="modal-footer"><button class="btn sm" onclick="projCloseModal('proj-modal-edit')">Cancelar</button><button class="btn sm primary" onclick="projSaveEdit()">Salvar</button></div></div></div>
+
       <div class="panel" id="panel-campos">
 
         <!-- Card 1: Seletor -->
@@ -978,6 +1076,10 @@
       <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 2v10M10 2v10M2 4h10M2 10h10"/></svg>
       <span>Config. do card</span>
     </button>
+    <button type="button" class="mobile-nav-item" data-mobile-panel="projetos" onclick="navigate('projetos')" title="Projetos" aria-label="Projetos">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M1.6 4.2v7.4a.9.9 0 0 0 .9.9h9a.9.9 0 0 0 .9-.9V6a.9.9 0 0 0-.9-.9H7L5.5 3.2h-3a.9.9 0 0 0-.9 1z"/></svg>
+      <span>Projetos</span>
+    </button>
     <button type="button" class="mobile-nav-item" data-mobile-panel="envmanager" onclick="navigate('envmanager')" title="Ambientes" aria-label="Ambientes">
       <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 1.8v10.4M2.4 4.2l9.2 5.6M11.6 4.2 2.4 9.8"/><circle cx="7" cy="7" r="1.3"/></svg>
       <span>Ambientes</span>
@@ -1019,6 +1121,7 @@
 <script src="assets/js/features/ambientes.js"></script>
 <script src="assets/js/features/criar-campo.js"></script>
 <script src="assets/js/features/pipelines.js"></script>
+<script src="assets/js/features/projetos.js"></script>
 <script src="assets/js/features/campos.js"></script>
 <script src="assets/js/features/massa.js"></script>
 <script src="assets/js/features/card-editor.js"></script>

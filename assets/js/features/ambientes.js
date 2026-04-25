@@ -25,6 +25,7 @@ function switchEnv(idx) {
   activeIdx = parseInt(idx, 10);
   saveEnvs();
   if (window.spaOverviewOnEnvironmentChanged) spaOverviewOnEnvironmentChanged();
+  if (window.projOnEnvironmentChanged) projOnEnvironmentChanged();
   testConnection(false);
 }
 
@@ -50,6 +51,7 @@ function activateEnv(idx) {
   activeIdx = idx;
   saveEnvs();
   if (window.spaOverviewOnEnvironmentChanged) spaOverviewOnEnvironmentChanged();
+  if (window.projOnEnvironmentChanged) projOnEnvironmentChanged();
   rebuildSelect();
   renderEnvList();
   testConnection(false);
@@ -64,6 +66,7 @@ function deleteEnv(idx) {
   if (activeIdx >= envs.length) activeIdx = envs.length - 1;
   saveEnvs();
   if (window.spaOverviewOnEnvironmentChanged) spaOverviewOnEnvironmentChanged();
+  if (window.projOnEnvironmentChanged) projOnEnvironmentChanged();
   rebuildSelect();
   renderEnvList();
   if (wasActive) testConnection(true);
@@ -138,6 +141,7 @@ function boot() {
     testConnection(true);
   }
   if (window.spaOverviewOnEnvironmentChanged) spaOverviewOnEnvironmentChanged();
+  if (window.projOnEnvironmentChanged) projOnEnvironmentChanged();
   navigate(initialPanel);
   criarInitTipos();
   massaInit();
