@@ -632,6 +632,28 @@ button, input, select, textarea { font-family: inherit; }
 .card-fields-table tr:hover td {
   background: rgba(255,255,255,.025);
 }
+.card-fields-table tr.selected td {
+  background: rgba(11,191,126,.14);
+  color: rgba(255,255,255,.88);
+}
+.card-fields-table tr.selected:hover td {
+  background: rgba(11,191,126,.19);
+}
+.card-fields-table tr.selected .field-label-txt {
+  color: #fff;
+}
+.card-fields-table tr.selected .field-id-mono,
+.card-fields-table tr.selected .fixed-toggle {
+  color: rgba(255,255,255,.68);
+}
+.card-fields-table tr.selected .field-type-badge {
+  background: rgba(89,171,237,.16);
+  color: #b9ddff;
+}
+.card-fields-table tr.selected .card-field-opt {
+  background: rgba(11,191,126,.18);
+  color: #87f8c9;
+}
 
 .card-section-header,
 .stage-rename-row td {

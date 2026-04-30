@@ -966,7 +966,13 @@
           <div class="card">
             <div class="card-title" style="justify-content:space-between;">
               <span style="display:flex;align-items:center;gap:7px;"><div class="card-accent"></div>Seções do card</span>
-              <span class="unsaved-badge" id="card-unsaved-badge" style="display:none;"> Alterações não salvas</span>
+              <span class="card-layout-actions">
+                <button class="btn sm" type="button" onclick="cardDownloadImportModel()">Baixar modelo</button>
+                <button class="btn sm" type="button" onclick="cardExportLayout()">Exportar layout</button>
+                <button class="btn sm outline-blue" type="button" onclick="cardOpenImportLayout()">Importar layout</button>
+                <input id="card-layout-import-file" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none;" onchange="cardImportLayoutFile(this)" />
+                <span class="unsaved-badge" id="card-unsaved-badge" style="display:none;"> Alterações não salvas</span>
+              </span>
             </div>
             <div id="card-sections-container"></div>
             <div class="new-section-form">

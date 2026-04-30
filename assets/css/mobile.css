@@ -319,6 +319,11 @@
     background: rgba(5,0,16,.48);
   }
 
+  .card-fields-table tr.selected {
+    background: rgba(11,191,126,.14);
+    border-color: rgba(11,191,126,.36);
+  }
+
   .campos-table tr:hover td,
   .stage-table tr:hover td,
   .card-fields-table tr:hover td {

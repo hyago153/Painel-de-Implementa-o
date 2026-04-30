@@ -1029,13 +1029,299 @@ async function cardDeleteFieldLegacy(si, fi) {
   }
 }
 
-async function cardSave() {
-  const data = cardConfig.map(sec => ({
-    name:     sec.name,
-    title:    sec.title,
-    type:     sec.type || 'section',
-    elements: sec.elements,
+function cardBuildLayoutData() {
+  return cardConfig.map(sec => ({
+    name: String(sec.name || sec.title || ''),
+    title: String(sec.title || sec.name || ''),
+    type: sec.type || 'section',
+    elements: (sec.elements || []).map(el => ({
+      name: String(el.name || ''),
+      optionFlags: Number(el.optionFlags || 0),
+      ...(el.options ? { options: el.options } : {}),
+    })).filter(el => el.name),
   }));
+}
+
+function cardSlug(value) {
+  return String(value || 'layout')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase() || 'layout';
+}
+
+function cardWorkbookAvailable() {
+  if (window.XLSX) return true;
+  toast('Biblioteca XLSX não carregada. Recarregue a página e tente novamente.', 'er');
+  return false;
+}
+
+function cardFieldInfo(fieldId) {
+  return cardAllFields[fieldId] || {};
+}
+
+function cardBoolLabel(value) {
+  return value ? 'Sim' : 'Não';
+}
+
+function cardTypeLabel(type) {
+  return TIPO_LABEL[type] || type || '';
+}
+
+function cardOriginLabel(origin) {
+  if (origin === 'native') return 'Nativo';
+  if (origin === 'custom') return 'Personalizado';
+  return origin || '';
+}
+
+function cardSectionTypeLabel(type) {
+  if (!type || type === 'section') return 'Seção';
+  return type;
+}
+
+function cardOptionFlagsLabel(optionFlags) {
+  return Number(optionFlags || 0) === 1 ? 'Mostrar sempre no card' : 'Oculto na seção';
+}
+
+function cardReadBool(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return ['1', 'sim', 's', 'yes', 'y', 'true', 'verdadeiro'].includes(normalized);
+}
+
+function cardDownloadImportModel() {
+  if (!cardWorkbookAvailable()) return;
+  const wb = XLSX.utils.book_new();
+  const contextRows = [
+    ['chave', 'valor'],
+    ['observacao', 'Preencha as abas Secoes e Campos. A importacao usa id_secao, ordem_secao, id_campo, ordem_campo e exibicao_no_card/mostrar_sempre.'],
+  ];
+  const sectionRows = [
+    ['ordem_secao', 'id_secao', 'titulo_secao', 'tipo_secao', 'quantidade_campos'],
+    [1, 'dados_principais', 'Dados principais', 'Seção', 2],
+  ];
+  const fieldRows = [
+    ['ordem_secao', 'id_secao', 'titulo_secao', 'ordem_campo', 'id_campo', 'label_campo', 'tipo_campo', 'origem_campo', 'obrigatorio', 'multiplo', 'mostrar_sempre', 'exibicao_no_card', 'opcoes', 'dica'],
+    [1, 'dados_principais', 'Dados principais', 1, 'TITLE', 'Nome', 'Texto', 'Nativo', 'Nao', 'Nao', 'Sim', 'Mostrar sempre no card', '', ''],
+    [1, 'dados_principais', 'Dados principais', 2, 'UF_CRM_EXEMPLO', 'Campo personalizado exemplo', 'Texto', 'Personalizado', 'Nao', 'Nao', 'Nao', 'Oculto na seção', '', 'Substitua pelo ID real do campo'],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(contextRows), 'Contexto');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sectionRows), 'Secoes');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(fieldRows), 'Campos');
+  XLSX.writeFile(wb, 'modelo-importacao-layout-card.xlsx');
+  toast('Modelo de importação baixado.', 'ok');
+}
+
+function cardExportLayout() {
+  if (!cardLoaded) { toast('Carregue uma configuração antes de exportar.', 'wn'); return; }
+  if (!cardWorkbookAvailable()) return;
+  const ctx = cardGetContext(false);
+  const layout = cardBuildLayoutData();
+  const wb = XLSX.utils.book_new();
+  const contextRows = [
+    ['chave', 'valor'],
+    ['versao', 1],
+    ['exportado_em', new Date().toISOString()],
+    ['origem', 'LibeSales Painel Bitrix24'],
+    ['modo', ctx.mode],
+    ['entityTypeId', ctx.entityTypeId || ''],
+    ['entityId', ctx.entityId || ''],
+    ['pipelineId', cardPipelineId || '0'],
+    ['leadType', ctx.mode === 'crm' && cardEntityTypeId === 1 ? cardLeadType : ''],
+    ['spaId', ctx.mode === 'spa' && ctx.spa ? ctx.spa.id : ''],
+    ['spaTitle', ctx.mode === 'spa' && ctx.spa ? ctx.spa.title : ''],
+  ];
+  const sectionRows = [[
+    'ordem_secao',
+    'id_secao',
+    'titulo_secao',
+    'tipo_secao',
+    'quantidade_campos',
+  ]];
+  const fieldRows = [[
+    'ordem_secao',
+    'id_secao',
+    'titulo_secao',
+    'ordem_campo',
+    'id_campo',
+    'label_campo',
+    'tipo_campo',
+    'origem_campo',
+    'obrigatorio',
+    'multiplo',
+    'mostrar_sempre',
+    'exibicao_no_card',
+    'opcoes',
+    'dica',
+  ]];
+
+  layout.forEach((sec, si) => {
+    const elements = sec.elements || [];
+    sectionRows.push([si + 1, sec.name, sec.title, cardSectionTypeLabel(sec.type), elements.length]);
+    elements.forEach((el, fi) => {
+      const info = cardFieldInfo(el.name);
+      fieldRows.push([
+        si + 1,
+        sec.name,
+        sec.title,
+        fi + 1,
+        el.name,
+        info.label || el.name,
+        cardTypeLabel(info.type),
+        cardOriginLabel(info.origin),
+        cardBoolLabel(!!info.mandatory),
+        cardBoolLabel(!!info.multiple),
+        cardBoolLabel(Number(el.optionFlags || 0) === 1),
+        cardOptionFlagsLabel(el.optionFlags),
+        (info.options || []).map(opt => opt.VALUE || opt.value || opt.label || opt).join('\n'),
+        info.helpMessage || '',
+      ]);
+    });
+  });
+
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(contextRows), 'Contexto');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sectionRows), 'Secoes');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(fieldRows), 'Campos');
+
+  const contextName = ctx.mode === 'spa' && ctx.spa ? `spa-${ctx.spa.id}` : `crm-${cardEntityTypeId}`;
+  XLSX.writeFile(wb, `layout-card-${cardSlug(contextName)}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  toast('Layout exportado.', 'ok');
+}
+
+function cardOpenImportLayout() {
+  if (!cardLoaded) { toast('Carregue uma configuração antes de importar.', 'wn'); return; }
+  const input = document.getElementById('card-layout-import-file');
+  if (!input) return;
+  input.value = '';
+  input.click();
+}
+
+function cardGetWorkbookRows(wb, sheetName) {
+  const sheet = wb && wb.Sheets && wb.Sheets[sheetName];
+  return sheet ? XLSX.utils.sheet_to_json(sheet, { defval: '' }) : [];
+}
+
+function cardPick(row, names) {
+  for (const name of names) {
+    if (row[name] !== undefined && row[name] !== null && String(row[name]).trim() !== '') return row[name];
+  }
+  return '';
+}
+
+function cardSectionsFromWorkbook(wb) {
+  const sectionRows = cardGetWorkbookRows(wb, 'Secoes');
+  const fieldRows = cardGetWorkbookRows(wb, 'Campos');
+  if (!fieldRows.length && !sectionRows.length) throw new Error('A planilha precisa ter as abas Secoes e/ou Campos.');
+
+  const sectionsByKey = new Map();
+  sectionRows.forEach((row, idx) => {
+    const order = parseInt(cardPick(row, ['ordem_secao', 'ordem']), 10) || idx + 1;
+    const name = String(cardPick(row, ['id_secao', 'name', 'secao']) || `secao_${order}`).trim();
+    const title = String(cardPick(row, ['titulo_secao', 'title', 'titulo']) || name).trim();
+    const type = String(cardPick(row, ['tipo_secao', 'type']) || 'section').trim().toLowerCase() === 'seção' ? 'section' : String(cardPick(row, ['tipo_secao', 'type']) || 'section').trim();
+    sectionsByKey.set(name, { order, name, title, type, elements: [] });
+  });
+
+  fieldRows.forEach((row, idx) => {
+    const sectionOrder = parseInt(cardPick(row, ['ordem_secao', 'ordem']), 10) || 9999;
+    const sectionName = String(cardPick(row, ['id_secao', 'name', 'secao']) || `secao_${sectionOrder}`).trim();
+    const sectionTitle = String(cardPick(row, ['titulo_secao', 'title', 'titulo']) || sectionName).trim();
+    const fieldId = String(cardPick(row, ['id_campo', 'field_id', 'campo', 'name'])).trim();
+    if (!fieldId) return;
+    if (!sectionsByKey.has(sectionName)) {
+      sectionsByKey.set(sectionName, {
+        order: sectionOrder,
+        name: sectionName,
+        title: sectionTitle,
+        type: 'section',
+        elements: [],
+      });
+    }
+    const section = sectionsByKey.get(sectionName);
+    const optionFlagsValue = cardPick(row, ['optionFlags', 'option_flags']);
+    const displayLabel = String(cardPick(row, ['exibicao_no_card', 'exibição_no_card'])).trim().toLowerCase();
+    const showAlways = cardPick(row, ['mostrar_sempre', 'visivel_no_card']);
+    section.elements.push({
+      order: parseInt(cardPick(row, ['ordem_campo', 'ordem_field']), 10) || idx + 1,
+      name: fieldId,
+      optionFlags: optionFlagsValue !== ''
+        ? Number(optionFlagsValue || 0)
+        : (displayLabel.includes('mostrar') || cardReadBool(showAlways) ? 1 : 0),
+    });
+  });
+
+  return Array.from(sectionsByKey.values())
+    .sort((a, b) => a.order - b.order)
+    .map(sec => ({
+      name: sec.name,
+      title: sec.title,
+      type: sec.type || 'section',
+      elements: sec.elements
+        .sort((a, b) => a.order - b.order)
+        .map(el => ({ name: el.name, optionFlags: Number(el.optionFlags || 0) })),
+    }));
+}
+
+function cardNormalizeImportedLayout(sections) {
+  if (!Array.isArray(sections)) throw new Error('Arquivo sem lista de seções.');
+  return sections.map((sec, idx) => {
+    const title = String(sec.title || sec.name || `Seção ${idx + 1}`).trim();
+    const name = String(sec.name || title.toLowerCase().replace(/\s+/g, '_')).trim();
+    const elements = Array.isArray(sec.elements) ? sec.elements : [];
+    return {
+      name,
+      title,
+      type: sec.type || 'section',
+      elements: elements.map(el => ({
+        name: String(el.name || '').trim(),
+        optionFlags: Number(el.optionFlags || 0),
+        ...(el.options ? { options: el.options } : {}),
+      })).filter(el => el.name),
+    };
+  });
+}
+
+function cardApplyImportedLayout(sections) {
+  const imported = cardNormalizeImportedLayout(sections);
+  const knownIds = new Set(Object.keys(cardAllFields || {}));
+  const missing = imported.reduce((total, sec) => (
+    total + (sec.elements || []).filter(el => !knownIds.has(el.name)).length
+  ), 0);
+  const msg = missing
+    ? `Importar layout? ${missing} campo(s) não existem no contexto atual e podem aparecer apenas pelo ID até serem criados.`
+    : 'Importar layout? Isso substitui as seções carregadas na tela.';
+  if (!confirm(msg)) return;
+  cardConfig = imported;
+  cardSelectedHiddenFields.clear();
+  cardExpandedHiddenFields.clear();
+  cardSelectedSectionFields.clear();
+  cardMarkUnsaved();
+  cardRender();
+  toast('Layout importado. Revise e salve para aplicar no Bitrix24.', 'ok', 4000);
+}
+
+function cardImportLayoutFile(input) {
+  const file = input && input.files && input.files[0];
+  if (!file) return;
+  if (!cardWorkbookAvailable()) {
+    input.value = '';
+    return;
+  }
+  file.arrayBuffer()
+    .then(buffer => {
+      const wb = XLSX.read(buffer, { type: 'array' });
+      cardApplyImportedLayout(cardSectionsFromWorkbook(wb));
+    })
+    .catch(e => {
+      toast('Erro ao importar layout: ' + e.message, 'er');
+    })
+    .finally(() => {
+      input.value = '';
+    });
+}
+
+async function cardSave() {
+  const data = cardBuildLayoutData();
   // scope 'P' (pessoal) funciona para qualquer usuário sem precisar de admin
   try {
     const { methodPrefix, base } = cardBuildCallParams('P');
@@ -1051,12 +1337,7 @@ async function cardSave() {
 
 async function cardForceAll() {
   if (!confirm('Isso vai sobrescrever a configuração de card de TODOS os usuários. Confirma?')) return;
-  const data = cardConfig.map(sec => ({
-    name:     sec.name,
-    title:    sec.title,
-    type:     sec.type || 'section',
-    elements: sec.elements,
-  }));
+  const data = cardBuildLayoutData();
   try {
     // Passo 1: salva a config atual no escopção comum (C) - requer admin
     const { methodPrefix, base } = cardBuildCallParams('C');
